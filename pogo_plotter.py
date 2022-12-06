@@ -88,6 +88,9 @@ class Pogo_robot:
         #print("    Debugging contact: l_dot", np.round(self.ldot,3))
         polar_coord_speed = (v_tangent**2 + self.ldot**2)**0.5
         
+        if abs((polar_coord_speed/total_v)-1) > 0.01:
+            print("Impact error: velocity off")
+            return
         # This check is good
         #print("  Check: impact speed", total_v, "post-impact speed", polar_coord_speed)
         
@@ -115,13 +118,16 @@ class Pogo_robot:
         print("    lk:", np.round(self.lk,3))
     
         # Update x, y and linear velocities, pivoting
-        # TODO: check signs
-        v_tan = prev_state[6]*prev_state[5]  # tangential velocity 
+        # TODO: "tangential" velocity wrong --> need to add "radial" component too
+        
+        v_tan = abs(prev_state[6]*prev_state[5])  # tangential velocity 
         self.x += prev_state[1]*dT   # Euler timestep integrate
         self.xdot = v_tan*np.cos(prev_state[4]-np.pi/2)
         self.y += prev_state[3]*dT
         self.ydot = v_tan*np.sin(prev_state[4]-np.pi/2)
     
+        print("    x:", self.x)
+        print("    y:", self.y)
         return
     
    
@@ -133,9 +139,20 @@ class Pogo_robot:
         """
         print("Current / original leg lengths:", np.round(self.lk,3), "/", np.round(self.l0,3))
         if self.lk >= self.l0:
+            print("  Lift-off! theta:", self.theta)
+            print("  Lift-off coordinates (x,y):", self.x, self.y)
             return True
         else:
             return False
+    
+    def check_fall(self):
+        """
+        TODO: check if robot has fallen / tripped
+        """
+        
+        return
+
+    
     
     def save_state(self, array):
         """ Access and save state information to array """
@@ -174,14 +191,16 @@ def plot_animation(xvalues, yvalues, xlabel, ylabel):
         plt.show()
     return
 
+
+
 """---------------- IMPLEMENTATION ----------------"""
 
 dT = 0.005  # seconds, maybe just Euler integrate
 state_history = []  # store trajectory
 
 # Initialize Pogo, propagate free flight
-Pogo = Pogo_robot(50,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
-test_time = 200   # total number of timesteps to simulate
+Pogo = Pogo_robot(100,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
+test_time = 150   # total number of timesteps to simulate
 
 time = 0
 state = 0   # flag 0 - free fall; 1 - contact
@@ -254,10 +273,10 @@ plt.ylabel("Leg length")
 plt.show()
 
 
-
+plt.plot(x_history, y_history)
 
 # Plot animation testing
-plot_animation(x_history, y_history, "x coordinate","y coordinate")
+#plot_animation(x_history, y_history, "x coordinate","y coordinate")
 
 
 #values = []
