@@ -108,7 +108,7 @@ class Pogo_robot:
     
         # l_ddot formula: -k/M(l_k - l_k0) - g sin(theta) + l*theta_dot^2 
         l_ddot = -self.k/self.M*(prev_state[6]-self.l0) - 9.81*np.sin(prev_state[4]) + prev_state[6]*(prev_state[5]**2)
-        #print("    l_ddot:",np.round(l_ddot,3))
+        
         
         # theta_ddot formula: -2*l_dot/l*theta_dot - g/l cos(theta)
         theta_ddot = -2*prev_state[7]/prev_state[6]*prev_state[5] - 9.81/prev_state[6]*np.cos(prev_state[4])
@@ -129,9 +129,12 @@ class Pogo_robot:
     
         # Euler timestep forward 
         self.x += prev_state[1]*dT   
-        self.xdot = v_tan*np.cos(prev_state[4] - np.pi/2) + self.ldot*np.cos(np.pi - prev_state[4])
+        self.xdot = -v_tan*np.cos(prev_state[4] - np.pi/2) - self.ldot*np.cos(np.pi - prev_state[4])
         self.y += prev_state[3]*dT
         self.ydot = v_tan*np.sin(prev_state[4]-np.pi/2) - self.ldot*np.sin(np.pi - prev_state[4])
+        
+        #print("  Check xdot, ydot:", self.xdot, self.ydot)
+        
         new_total_v = ((self.ydot)**2+(self.xdot)**2)**0.5   # for checking
         
         self.foot_x = self.x + self.lk*np.sin(self.theta - np.pi/2)
@@ -167,8 +170,10 @@ class Pogo_robot:
         """
         TODO: check if robot has fallen / tripped
         """
-        
-        return
+        if self.y <= 0:            
+            print("Max distance travelled:", self.x)
+            return True
+        return False
 
     
     
@@ -225,12 +230,12 @@ dT = 0.005  # seconds, maybe just Euler integrate
 state_history = []  # store trajectory
 
 # Initialize Pogo, propagate free flight
-Pogo = Pogo_robot(20,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
+Pogo = Pogo_robot(200,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
 test_time = 50   # total number of timesteps to simulate
 
 time = 0
 state = 0   # flag 0 - free fall; 1 - contact
-while time < test_time:
+while time < test_time and Pogo.check_fall() == False:
     if state == 0: 
         if Pogo.is_in_contact() == False:
             Pogo.flight() 
@@ -240,6 +245,7 @@ while time < test_time:
             state = 1
             Pogo.first_contact()   # compute conversion only once
             Pogo.contact()         # do compression of leg
+        
     else:   
         # state = 1
         if Pogo.takeoff_check() == False:
@@ -260,7 +266,7 @@ while time < test_time:
 # Plot trajectories
 x_history = []
 x_foot_history = []
-for i in range(test_time):
+for i in range(len(state_history)):
     x_history.append(state_history[i][0])
     x_foot_history.append(state_history[i][8])
 
@@ -272,7 +278,7 @@ plt.show()
 
 y_history = []
 y_foot_history = []
-for i in range(test_time):
+for i in range(len(state_history)):
     y_history.append(state_history[i][2])
     y_foot_history.append(state_history[i][9])
 
@@ -285,7 +291,7 @@ plt.ylabel("y")
 plt.show()
 
 theta_history = []
-for i in range(test_time):
+for i in range(len(state_history)):
     theta_history.append(state_history[i][4])
 
 plt.plot(theta_history)
@@ -294,7 +300,7 @@ plt.ylabel("theta")
 plt.show()
 
 lk_history = []
-for i in range(test_time):
+for i in range(len(state_history)):
     lk_history.append(state_history[i][6])
     
 
