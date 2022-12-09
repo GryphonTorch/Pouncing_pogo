@@ -156,8 +156,7 @@ class Pogo_robot:
             print(" ! CONTACT ERROR: Cartesian to polar velocity off")
             return
         
-        print("    foot_y", self.foot_y)
-        
+        #print("    foot_y", self.foot_y)
         #print("    body x:", np.round(self.x,3))
         #print("    body y:", np.round(self.y,3))
         return
@@ -169,17 +168,18 @@ class Pogo_robot:
         Return true if spring is back to equilibrium extension 
         (to back to flight phase)
         """
-        print("Current / original leg lengths:", np.round(self.lk,3), "/", np.round(self.l0,3))
+        #print("Current / original leg lengths:", np.round(self.lk,3), "/", np.round(self.l0,3))
         if self.lk >= self.l0:
             print("  Lift-off! theta:", self.theta)
-            print("  Lift-off coordinates (x,y):", self.x, self.y)
+            print("  Lift-off coordinates (x,y):", np.round(self.x,3), np.round(self.y,3))
+            print("  xdot, ydot:", np.round(self.xdot,3), np.round(self.ydot,3))
             return True
         else:
             return False
     
     def check_fall(self):
         """
-        TODO: check if robot has fallen / tripped
+        Check if robot has fallen / tripped
         """
         if self.foot_y <= -0.05:            
             print("Max distance travelled:", self.x)
@@ -242,7 +242,7 @@ dT = 0.005  # seconds, maybe just Euler integrate
 state_history = []  # store trajectory
 
 # Initialize Pogo, propagate free flight
-Pogo = Pogo_robot(200,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
+Pogo = Pogo_robot(200,0.3,0.3, 0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
 test_time = 100   # total number of timesteps to simulate
 
 time = 0
