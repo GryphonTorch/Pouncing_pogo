@@ -15,7 +15,8 @@ from matplotlib import pyplot as plt
 # upwards is positive
 
 class Pogo_robot:
-    def __init__(self, k, M, l0, init_x, init_xdot, init_y, init_ydot, init_theta, init_thetadot):
+    def __init__(self, k, M, l0, init_x, init_xdot, init_y, init_ydot, \
+                 init_theta, init_thetadot):
         """Initialize state parameters and constant"""
         self.x = init_x
         self.xdot = init_xdot
@@ -31,6 +32,8 @@ class Pogo_robot:
         
         self.foot_x = self.x + self.lk*np.sin(self.theta - np.pi/2)
         self.foot_y = self.y - self.lk*np.cos(self.theta - np.pi/2)
+        
+        self.theta0 = init_theta   # save initial angle; suppose leg goes back every time
         
         print("Pogo initiated. Spring constant", k, ", mass", M,\
               ", leg length", l0)
@@ -52,13 +55,16 @@ class Pogo_robot:
         self.xdot += 0.0
         self.y += prev_state[3]*dT
         self.ydot += -9.81*dT
-        self.theta += prev_state[5]*dT
-        self.thetadot += 0  # no change
-        self.lk = self.l0   # back to equilibrium point
+        self.theta = self.theta0   # revert back to theta - but check swing oK?
+        self.thetadot = 0    # no change
+        self.lk = self.l0    # back to equilibrium point
         self.ldot = 0   
         
         self.foot_x = self.x + self.lk*np.sin(self.theta - np.pi/2)
         self.foot_y = self.y - self.lk*np.cos(self.theta - np.pi/2)
+        
+        
+        
         return 
   
     def is_in_contact(self):
@@ -120,25 +126,30 @@ class Pogo_robot:
         self.lk       += prev_state[7]*dT
         self.ldot     += l_ddot*dT   
         
-        print("    theta:", np.round(self.theta,3))
-        print("    lk:", np.round(self.lk,3))
+        #print("    theta:", np.round(self.theta,3))
+        #print("    lk:", np.round(self.lk,3))
     
         # Update Cartesian velocities with both tangential and radial components        
         v_tan = abs(prev_state[6]*prev_state[5])          # tangential velocity, lk*thetadot
         total_v_polar = (v_tan**2 + self.ldot**2)**0.5    # for checking
-    
-        # Euler timestep forward 
-        self.x += prev_state[1]*dT   
-        self.xdot = -v_tan*np.cos(prev_state[4] - np.pi/2) - self.ldot*np.cos(np.pi - prev_state[4])
-        self.y += prev_state[3]*dT
-        self.ydot = v_tan*np.sin(prev_state[4]-np.pi/2) - self.ldot*np.sin(np.pi - prev_state[4])
         
+        # Euler timestep forward 
+        self.xdot = -v_tan*np.cos(prev_state[4] - np.pi/2) -\
+                    self.ldot*np.cos(np.pi - prev_state[4])
+        self.ydot = v_tan*np.sin(prev_state[4]-np.pi/2) - \
+                    self.ldot*np.sin(np.pi - prev_state[4])
         #print("  Check xdot, ydot:", self.xdot, self.ydot)
         
         new_total_v = ((self.ydot)**2+(self.xdot)**2)**0.5   # for checking
         
-        self.foot_x = self.x + self.lk*np.sin(self.theta - np.pi/2)
-        self.foot_y = self.y - self.lk*np.cos(self.theta - np.pi/2)
+        #self.foot_x = self.x + self.lk*np.sin(self.theta - np.pi/2)
+        #self.foot_y = self.y - self.lk*np.cos(self.theta - np.pi/2)
+        
+        # force set this at 0
+        self.foot_y = 0
+        self.y = self.lk*np.cos(self.theta - np.pi/2)  # by geometry
+        # don't change self.x
+        self.x = self.foot_x - self.lk*np.sin(self.theta - np.pi/2)
         
         # Check velocity conversion makes sense
         if abs((new_total_v/total_v_polar)-1) > 0.01:
@@ -170,7 +181,7 @@ class Pogo_robot:
         """
         TODO: check if robot has fallen / tripped
         """
-        if self.y <= 0:            
+        if self.foot_y <= -0.05:            
             print("Max distance travelled:", self.x)
             return True
         return False
@@ -198,9 +209,10 @@ def plot_animation(xvalues, yvalues, xvalues2, yvalues2, xlabel, ylabel):
     x, x2, y, y2 = [], [], [], []
     
     max_x = max(max(xvalues), max(xvalues2))
-    min_x = min(min(xvalues), min(xvalues2))
+    min_x = 0
     max_y = max(max(yvalues), max(yvalues2))
-    min_y = min(min(yvalues), min(yvalues2))
+    min_y = 0 # should be this ideally
+    #min_y = min(min(yvalues), min(yvalues2))
     if len(xvalues) != len(yvalues):
         print("Error: two data arrays' lengths different")
         return 
@@ -231,7 +243,7 @@ state_history = []  # store trajectory
 
 # Initialize Pogo, propagate free flight
 Pogo = Pogo_robot(200,1,0.3,0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
-test_time = 50   # total number of timesteps to simulate
+test_time = 100   # total number of timesteps to simulate
 
 time = 0
 state = 0   # flag 0 - free fall; 1 - contact
@@ -257,6 +269,9 @@ while time < test_time and Pogo.check_fall() == False:
     
     Pogo.save_state(state_history)
     time += 1
+    
+if Pogo.check_fall() == True:
+    print("Fell at step:", time)
     
     
 
@@ -318,13 +333,7 @@ plt.show()
 
 # Plot animation testing
 plot_animation(x_history, y_history, x_foot_history, y_foot_history, "x coordinate","y coordinate")
-
-
-#values = []
-#for i in range(50):
-#    values.append(i)
-#plot_animation(values, "Testing")
-    
+   
     
 
 
