@@ -242,8 +242,8 @@ dT = 0.005  # seconds, maybe just Euler integrate
 state_history = []  # store trajectory
 
 # Initialize Pogo, propagate free flight
-Pogo = Pogo_robot(200,0.3,0.3, 0, 0.2, 0.5, -0.3, 2, 0)   # Initialize k,l,m and state
-test_time = 100   # total number of timesteps to simulate
+Pogo = Pogo_robot(200,0.5,0.3, 0, 0.2, 0.5, -0.3, 1.7, 0)   # Initialize k,l,m and state
+test_time = 1000   # total number of timesteps to simulate
 
 time = 0
 state = 0   # flag 0 - free fall; 1 - contact
@@ -327,12 +327,13 @@ plt.show()
 
 plt.plot(x_history, y_history, color="blue")
 plt.plot(x_foot_history, y_foot_history, color="green")
+plt.ylim(0,)
 plt.xlabel("x coordinate")
 plt.ylabel("y coordinate")
 plt.show()
 
 # Plot animation testing
-plot_animation(x_history, y_history, x_foot_history, y_foot_history, "x coordinate","y coordinate")
+# plot_animation(x_history, y_history, x_foot_history, y_foot_history, "x coordinate","y coordinate")
    
     
 
